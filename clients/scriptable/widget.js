@@ -102,17 +102,18 @@ function sfImage(name, size, tint) {
 // ── API fetch ─────────────────────────────────────────────────
 
 async function fetchWeather() {
-  const params = new URLSearchParams({
-    latitude:          String(CONFIG.latitude),
-    longitude:         String(CONFIG.longitude),
-    current:           'temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m',
-    daily:             'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
-    temperature_unit:  CONFIG.temperatureUnit,
-    wind_speed_unit:   CONFIG.windSpeedUnit,
-    timezone:          CONFIG.timezone,
-    forecast_days:     '5',
-  })
-  const req = new Request(`${CONFIG.serverUrl}/api/weather?${params}`)
+  // URLSearchParams is not available in Scriptable's JavaScriptCore runtime.
+  const qs = [
+    `latitude=${CONFIG.latitude}`,
+    `longitude=${CONFIG.longitude}`,
+    `current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m`,
+    `daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`,
+    `temperature_unit=${CONFIG.temperatureUnit}`,
+    `wind_speed_unit=${CONFIG.windSpeedUnit}`,
+    `timezone=${encodeURIComponent(CONFIG.timezone)}`,
+    `forecast_days=5`,
+  ].join('&')
+  const req = new Request(`${CONFIG.serverUrl}/api/weather?${qs}`)
   req.timeoutInterval = 10
   return req.loadJSON()
 }
