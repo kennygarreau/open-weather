@@ -4,30 +4,27 @@
 //
 // Install: paste this file into a new Scriptable script.
 // Supports small and medium widget sizes.
+//
+// Location is resolved automatically from the device GPS.
+// The CONFIG fallback values are only used if location
+// permission is denied or the GPS times out.
 // ============================================================
 
 // ── Configuration ────────────────────────────────────────────
 const CONFIG = {
   // URL of your self-hosted Open Weather instance.
-  // Use your server's LAN IP or public hostname.
   serverUrl: 'http://192.168.1.x:4004',
 
-  // Coordinates for the location you want to display.
-  latitude: 45.5017,
-  longitude: -73.5673,
-
-  // Display name shown in the widget (not fetched from API).
-  locationName: 'Montreal',
+  // Fallback coordinates used when GPS is unavailable.
+  fallbackLatitude: 45.5017,
+  fallbackLongitude: -73.5673,
+  fallbackLocationName: 'Montreal',
 
   // 'celsius' | 'fahrenheit'
   temperatureUnit: 'celsius',
 
   // 'kmh' | 'mph' | 'ms'
   windSpeedUnit: 'kmh',
-
-  // IANA timezone string, e.g. 'America/Toronto', or 'auto' to
-  // let the server detect it from coordinates.
-  timezone: 'auto',
 }
 // ─────────────────────────────────────────────────────────────
 
@@ -42,16 +39,40 @@ const COLOR = {
   rain:      new Color('#60a5fa'),
 }
 
+// ── Location ──────────────────────────────────────────────────
+
+async function resolveLocation() {
+  try {
+    Location.setAccuracyToHundredMeters()
+    const gps = await Location.current()
+    const lat = gps.latitude
+    const lon = gps.longitude
+
+    // Reverse geocode to get a human-readable city name.
+    const geo = await Location.reverseGeocode(lat, lon)
+    const place = geo[0] ?? {}
+    const name = place.locality || place.subAdministrativeArea || place.administrativeArea || CONFIG.fallbackLocationName
+
+    return { lat, lon, name }
+  } catch {
+    // Permission denied, airplane mode, or timeout — use fallback.
+    return {
+      lat: CONFIG.fallbackLatitude,
+      lon: CONFIG.fallbackLongitude,
+      name: CONFIG.fallbackLocationName,
+    }
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 
 function unitSuffix() {
   return CONFIG.temperatureUnit === 'fahrenheit' ? '°F' : '°C'
 }
 
-// WMO code → SF Symbol name (iOS-native, no emoji/font issues).
 function sfSymbolName(code, isDay = true) {
-  if (code === 0)  return isDay ? 'sun.max.fill'           : 'moon.stars.fill'
-  if (code <= 2)   return isDay ? 'cloud.sun.fill'         : 'cloud.moon.fill'
+  if (code === 0)  return isDay ? 'sun.max.fill'      : 'moon.stars.fill'
+  if (code <= 2)   return isDay ? 'cloud.sun.fill'    : 'cloud.moon.fill'
   if (code === 3)  return 'cloud.fill'
   if (code <= 48)  return 'cloud.fog.fill'
   if (code <= 55)  return 'cloud.drizzle.fill'
@@ -75,7 +96,6 @@ function wmoDescription(code) {
   return MAP[code] ?? 'Unknown'
 }
 
-// Parse a YYYY-MM-DD string as local midnight (avoids UTC-shift bug).
 function parseLocalDate(iso) {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y, m - 1, d)
@@ -83,34 +103,32 @@ function parseLocalDate(iso) {
 
 function formatDayLabel(iso) {
   const date = parseLocalDate(iso)
-  const today = new Date(); today.setHours(0,0,0,0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
   if (date.getTime() === today.getTime()) return 'Today'
   return date.toLocaleDateString([], { weekday: 'short' })
 }
 
 function sfImage(name, size, tint) {
-  const img = SFSymbol.named(name) ?? SFSymbol.named('questionmark')
-  const el = stack => {
-    const i = stack.addImage(img.image)
-    i.imageSize = new Size(size, size)
-    if (tint) i.tintColor = tint
-    return i
+  const sym = SFSymbol.named(name) ?? SFSymbol.named('questionmark')
+  return stack => {
+    const img = stack.addImage(sym.image)
+    img.imageSize = new Size(size, size)
+    if (tint) img.tintColor = tint
+    return img
   }
-  return el
 }
 
 // ── API fetch ─────────────────────────────────────────────────
 
-async function fetchWeather() {
-  // URLSearchParams is not available in Scriptable's JavaScriptCore runtime.
+async function fetchWeather(lat, lon) {
   const qs = [
-    `latitude=${CONFIG.latitude}`,
-    `longitude=${CONFIG.longitude}`,
+    `latitude=${lat}`,
+    `longitude=${lon}`,
     `current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m`,
     `daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`,
     `temperature_unit=${CONFIG.temperatureUnit}`,
     `wind_speed_unit=${CONFIG.windSpeedUnit}`,
-    `timezone=${encodeURIComponent(CONFIG.timezone)}`,
+    `timezone=auto`,
     `forecast_days=5`,
   ].join('&')
   const req = new Request(`${CONFIG.serverUrl}/api/weather?${qs}`)
@@ -120,14 +138,13 @@ async function fetchWeather() {
 
 // ── Widget: small ─────────────────────────────────────────────
 
-function buildSmall(widget, data) {
+function buildSmall(widget, data, locationName) {
   const { current } = data
   const ul = unitSuffix()
   const isDay = current.is_day === 1
 
   widget.addSpacer()
 
-  // Icon + temperature
   const row = widget.addStack()
   row.layoutHorizontally()
   row.centerAlignContent()
@@ -139,7 +156,7 @@ function buildSmall(widget, data) {
 
   widget.addSpacer(4)
 
-  const loc = widget.addText(CONFIG.locationName)
+  const loc = widget.addText(locationName)
   loc.font = Font.mediumSystemFont(11)
   loc.textColor = COLOR.secondary
 
@@ -156,7 +173,7 @@ function buildSmall(widget, data) {
 
 // ── Widget: medium ────────────────────────────────────────────
 
-function buildMedium(widget, data) {
+function buildMedium(widget, data, locationName) {
   const { current, daily } = data
   const ul = unitSuffix()
   const isDay = current.is_day === 1
@@ -168,7 +185,6 @@ function buildMedium(widget, data) {
   const left = root.addStack()
   left.layoutVertically()
   left.size = new Size(148, 0)
-
   left.addSpacer()
 
   const iconRow = left.addStack()
@@ -182,7 +198,7 @@ function buildMedium(widget, data) {
 
   left.addSpacer(3)
 
-  const locText = left.addText(CONFIG.locationName)
+  const locText = left.addText(locationName)
   locText.font = Font.mediumSystemFont(12)
   locText.textColor = COLOR.secondary
 
@@ -207,8 +223,7 @@ function buildMedium(widget, data) {
   const right = root.addStack()
   right.layoutVertically()
 
-  // Filter to today + future, show up to 4 days
-  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0)
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
   const futureDays = daily.time
     .map((t, i) => ({ t, i }))
     .filter(({ t }) => parseLocalDate(t) >= todayMidnight)
@@ -221,33 +236,26 @@ function buildMedium(widget, data) {
     row.layoutHorizontally()
     row.centerAlignContent()
 
-    // Day name
     const dayLabel = row.addText(formatDayLabel(t))
     dayLabel.font = Font.systemFont(11)
     dayLabel.textColor = COLOR.secondary
     dayLabel.minimumScaleFactor = 0.8
 
     row.addSpacer(4)
-
-    // Icon
     sfImage(sfSymbolName(daily.weather_code[i]), 13, COLOR.accent)(row)
-
     row.addSpacer()
 
-    // Rain probability (hidden when 0 to avoid clutter)
     const rain = daily.precipitation_probability_max[i]
     if (rain > 0) {
       const rainText = row.addText(`${rain}%`)
       rainText.font = Font.systemFont(10)
       rainText.textColor = COLOR.rain
     } else {
-      const placeholder = row.addText('')
-      placeholder.minimumScaleFactor = 1
+      row.addText('').minimumScaleFactor = 1
     }
 
     row.addSpacer(6)
 
-    // Hi / Lo
     const hi = row.addText(String(Math.round(daily.temperature_2m_max[i])))
     hi.font = Font.mediumSystemFont(11)
     hi.textColor = COLOR.primary
@@ -273,16 +281,16 @@ widget.backgroundColor = COLOR.bg
 widget.setPadding(14, 16, 14, 16)
 
 try {
-  const data = await fetchWeather()
+  const { lat, lon, name } = await resolveLocation()
+  const data = await fetchWeather(lat, lon)
   const family = config.widgetFamily ?? 'medium'
 
   if (family === 'small') {
-    buildSmall(widget, data)
+    buildSmall(widget, data, name)
   } else {
-    buildMedium(widget, data)
+    buildMedium(widget, data, name)
   }
 } catch (e) {
-  // Show error inline so the widget doesn't just go blank.
   widget.addSpacer()
   const errText = widget.addText(`Cannot connect to\n${CONFIG.serverUrl}`)
   errText.font = Font.systemFont(11)
