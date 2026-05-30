@@ -18,6 +18,7 @@ export interface CurrentWeatherData {
 	weather_code: number;
 	wind_speed_10m: number;
 	wind_direction_10m: number;
+	uv_index: number;
 	is_day: number;
 }
 

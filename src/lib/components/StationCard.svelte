@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { stationStore } from '$lib/stores/stations';
-	import { describeWeatherCode } from '$lib/api/weather';
+	import { describeWeatherCode, tempUnitLabel, windUnitLabel, precipUnitLabel, windCardinal } from '$lib/api/weather';
 	import WeatherIcon from '$lib/components/WeatherIcon.svelte';
 	import type { CurrentWeatherData, GeocodingResult } from '$lib/api/types';
 
@@ -10,17 +10,19 @@
 		location: GeocodingResult;
 		temperatureUnit: string;
 		windUnit: string;
+		precipUnit: string;
 	}
 
-	let { omCurrent, location, temperatureUnit, windUnit }: Props = $props();
+	let { omCurrent, location, temperatureUnit, windUnit, precipUnit }: Props = $props();
 
 	const obs = stationStore.observation;
 	const station = stationStore.activeStation;
 	const err = stationStore.error;
 	const isLoading = stationStore.loading;
 
-	const unitLabel = $derived(temperatureUnit === 'fahrenheit' ? '°F' : '°C');
-	const windLabel = $derived(windUnit === 'mph' ? 'mph' : windUnit === 'ms' ? 'm/s' : 'km/h');
+	const unitLabel = $derived(tempUnitLabel(temperatureUnit));
+	const windLabel = $derived(windUnitLabel(windUnit));
+	const precipLabel = $derived(precipUnitLabel(precipUnit));
 
 	// Use station value when available, fall back to Open-Meteo.
 	const temperature = $derived($obs?.temperature ?? omCurrent.temperature_2m);
@@ -80,11 +82,11 @@
 		</div>
 		<div>
 			<p class="text-xs uppercase tracking-wide text-gray-400">Wind</p>
-			<p class="font-medium">{Math.round(windSpeed)} {windLabel}</p>
+			<p class="font-medium">{Math.round(windSpeed)} {windLabel} {windCardinal(omCurrent.wind_direction_10m)}</p>
 		</div>
 		<div>
 			<p class="text-xs uppercase tracking-wide text-gray-400">Rain</p>
-			<p class="font-medium">{precipitation.toFixed(1)} mm</p>
+			<p class="font-medium">{precipitation.toFixed(1)} {precipLabel}</p>
 		</div>
 		{#if $obs?.pressure !== undefined}
 			<div>
@@ -94,7 +96,7 @@
 		{:else}
 			<div>
 				<p class="text-xs uppercase tracking-wide text-gray-400">UV Index</p>
-				<p class="font-medium text-gray-300 dark:text-gray-600">—</p>
+				<p class="font-medium">{omCurrent.uv_index}</p>
 			</div>
 		{/if}
 	</div>

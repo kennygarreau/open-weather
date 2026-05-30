@@ -25,6 +25,8 @@
 	},
 	"dependencies": {
 		"@iconify-json/wi": "^1.2.1",
-		"@iconify/svelte": "^5.2.1"
+		"@iconify/svelte": "^5.2.1",
+		"@types/leaflet": "^1.9.21",
+		"leaflet": "^1.9.4"
 	}
 }

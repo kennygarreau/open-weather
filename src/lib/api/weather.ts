@@ -11,7 +11,7 @@ export interface WeatherRequestOptions {
 	timezone?: string;
 }
 
-const CURRENT_FIELDS = [
+export const CURRENT_FIELDS = [
 	'temperature_2m',
 	'relative_humidity_2m',
 	'apparent_temperature',
@@ -19,10 +19,11 @@ const CURRENT_FIELDS = [
 	'weather_code',
 	'wind_speed_10m',
 	'wind_direction_10m',
+	'uv_index',
 	'is_day'
 ];
 
-const HOURLY_FIELDS = [
+export const HOURLY_FIELDS = [
 	'temperature_2m',
 	'relative_humidity_2m',
 	'precipitation_probability',
@@ -31,7 +32,7 @@ const HOURLY_FIELDS = [
 	'is_day'
 ];
 
-const DAILY_FIELDS = [
+export const DAILY_FIELDS = [
 	'weather_code',
 	'temperature_2m_max',
 	'temperature_2m_min',
@@ -41,6 +42,24 @@ const DAILY_FIELDS = [
 	'sunrise',
 	'sunset'
 ];
+
+export function tempUnitLabel(unit: string): string {
+	return unit === 'fahrenheit' ? '°F' : '°C';
+}
+
+export function windUnitLabel(unit: string): string {
+	return unit === 'mph' ? 'mph' : unit === 'ms' ? 'm/s' : 'km/h';
+}
+
+export function precipUnitLabel(unit: string): string {
+	return unit === 'inch' ? 'in' : 'mm';
+}
+
+const CARDINAL_DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+
+export function windCardinal(deg: number): string {
+	return CARDINAL_DIRS[Math.round(deg / 45) % 8];
+}
 
 export async function fetchWeather(
 	opts: WeatherRequestOptions,
@@ -65,35 +84,36 @@ export async function fetchWeather(
 	return res.json();
 }
 
+const WMO_DESCRIPTIONS: Record<number, string> = {
+	0: 'Clear sky',
+	1: 'Mainly clear',
+	2: 'Partly cloudy',
+	3: 'Overcast',
+	45: 'Fog',
+	48: 'Icy fog',
+	51: 'Light drizzle',
+	53: 'Moderate drizzle',
+	55: 'Dense drizzle',
+	61: 'Slight rain',
+	63: 'Moderate rain',
+	65: 'Heavy rain',
+	71: 'Slight snow',
+	73: 'Moderate snow',
+	75: 'Heavy snow',
+	77: 'Snow grains',
+	80: 'Slight showers',
+	81: 'Moderate showers',
+	82: 'Violent showers',
+	85: 'Slight snow showers',
+	86: 'Heavy snow showers',
+	95: 'Thunderstorm',
+	96: 'Thunderstorm with hail',
+	99: 'Thunderstorm with heavy hail'
+};
+
 /** Map WMO weather code to a human-readable description. */
 export function describeWeatherCode(code: number): string {
-	const descriptions: Record<number, string> = {
-		0: 'Clear sky',
-		1: 'Mainly clear',
-		2: 'Partly cloudy',
-		3: 'Overcast',
-		45: 'Fog',
-		48: 'Icy fog',
-		51: 'Light drizzle',
-		53: 'Moderate drizzle',
-		55: 'Dense drizzle',
-		61: 'Slight rain',
-		63: 'Moderate rain',
-		65: 'Heavy rain',
-		71: 'Slight snow',
-		73: 'Moderate snow',
-		75: 'Heavy snow',
-		77: 'Snow grains',
-		80: 'Slight showers',
-		81: 'Moderate showers',
-		82: 'Violent showers',
-		85: 'Slight snow showers',
-		86: 'Heavy snow showers',
-		95: 'Thunderstorm',
-		96: 'Thunderstorm with hail',
-		99: 'Thunderstorm with heavy hail'
-	};
-	return descriptions[code] ?? 'Unknown';
+	return WMO_DESCRIPTIONS[code] ?? 'Unknown';
 }
 
 /** Map WMO weather code to a simple emoji icon.

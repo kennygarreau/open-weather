@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { describeWeatherCode } from '$lib/api/weather';
+	import { describeWeatherCode, tempUnitLabel, windUnitLabel, precipUnitLabel, windCardinal } from '$lib/api/weather';
 	import WeatherIcon from '$lib/components/WeatherIcon.svelte';
 	import { favorites } from '$lib/stores/favorites';
 	import type { CurrentWeatherData, GeocodingResult } from '$lib/api/types';
@@ -9,12 +9,14 @@
 		location: GeocodingResult;
 		temperatureUnit: string;
 		windUnit: string;
+		precipUnit: string;
 	}
 
-	let { current, location, temperatureUnit, windUnit }: Props = $props();
+	let { current, location, temperatureUnit, windUnit, precipUnit }: Props = $props();
 
-	const unitLabel = $derived(temperatureUnit === 'fahrenheit' ? '°F' : '°C');
-	const windLabel = $derived(windUnit === 'mph' ? 'mph' : windUnit === 'ms' ? 'm/s' : 'km/h');
+	const unitLabel = $derived(tempUnitLabel(temperatureUnit));
+	const windLabel = $derived(windUnitLabel(windUnit));
+	const precipLabel = $derived(precipUnitLabel(precipUnit));
 	const isFavorite = $derived(favorites.has(location.id, $favorites));
 
 	function toggleFavorite() {
@@ -57,18 +59,22 @@
 		</div>
 	</div>
 
-	<div class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-600 dark:text-gray-400">
+	<div class="mt-6 grid grid-cols-4 gap-4 text-center text-sm text-gray-600 dark:text-gray-400">
 		<div>
 			<p class="text-xs uppercase tracking-wide text-gray-400">Humidity</p>
 			<p class="font-medium">{current.relative_humidity_2m}%</p>
 		</div>
 		<div>
 			<p class="text-xs uppercase tracking-wide text-gray-400">Wind</p>
-			<p class="font-medium">{Math.round(current.wind_speed_10m)} {windLabel}</p>
+			<p class="font-medium">{Math.round(current.wind_speed_10m)} {windLabel} {windCardinal(current.wind_direction_10m)}</p>
 		</div>
 		<div>
 			<p class="text-xs uppercase tracking-wide text-gray-400">Rain</p>
-			<p class="font-medium">{current.precipitation} mm</p>
+			<p class="font-medium">{current.precipitation} {precipLabel}</p>
+		</div>
+		<div>
+			<p class="text-xs uppercase tracking-wide text-gray-400">UV Index</p>
+			<p class="font-medium">{current.uv_index}</p>
 		</div>
 	</div>
 </div>

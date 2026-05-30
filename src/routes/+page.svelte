@@ -7,7 +7,9 @@
 	import StationCard from '$lib/components/StationCard.svelte';
 	import HourlyForecast from '$lib/components/HourlyForecast.svelte';
 	import DailyForecast from '$lib/components/DailyForecast.svelte';
+	import RadarMap from '$lib/components/RadarMap.svelte';
 	import FavoriteLocations from '$lib/components/FavoriteLocations.svelte';
+	import { CURRENT_FIELDS, HOURLY_FIELDS, DAILY_FIELDS } from '$lib/api/weather';
 	import type { WeatherResponse } from '$lib/api/types';
 	import type { UnitPreferences } from '$lib/stores/units';
 
@@ -72,34 +74,9 @@
 			const params = new URLSearchParams({
 				latitude: String(lat),
 				longitude: String(lon),
-				current: [
-					'temperature_2m',
-					'relative_humidity_2m',
-					'apparent_temperature',
-					'precipitation',
-					'weather_code',
-					'wind_speed_10m',
-					'wind_direction_10m',
-					'is_day'
-				].join(','),
-				hourly: [
-					'temperature_2m',
-					'relative_humidity_2m',
-					'precipitation_probability',
-					'weather_code',
-					'wind_speed_10m',
-					'is_day'
-				].join(','),
-				daily: [
-					'weather_code',
-					'temperature_2m_max',
-					'temperature_2m_min',
-					'precipitation_sum',
-					'precipitation_probability_max',
-					'wind_speed_10m_max',
-					'sunrise',
-					'sunset'
-				].join(','),
+				current: CURRENT_FIELDS.join(','),
+				hourly: HOURLY_FIELDS.join(','),
+				daily: DAILY_FIELDS.join(','),
 				temperature_unit: u.temperature,
 				wind_speed_unit: u.windSpeed,
 				precipitation_unit: u.precipitation,
@@ -163,6 +140,7 @@
 				location={$selectedLocation}
 				temperatureUnit={$units.temperature}
 				windUnit={$units.windSpeed}
+				precipUnit={$units.precipitation}
 			/>
 		{:else}
 			<CurrentWeather
@@ -170,24 +148,19 @@
 				location={$selectedLocation}
 				temperatureUnit={$units.temperature}
 				windUnit={$units.windSpeed}
+				precipUnit={$units.precipitation}
 			/>
 		{/if}
 
-		<!-- Forecast always comes from Open-Meteo -->
-		<div class="flex items-center gap-2">
-			<span class="text-xs text-gray-400">
-				Forecast · Open-Meteo
-				{#if cachedAt}
-					· as of {formatCachedAt(cachedAt)}
-				{/if}
-			</span>
-			<div class="h-px flex-1 bg-gray-100 dark:bg-gray-800"></div>
-		</div>
-
+		<RadarMap
+			latitude={$selectedLocation.latitude}
+			longitude={$selectedLocation.longitude}
+		/>
 		<HourlyForecast
 			hourly={weather.hourly}
 			temperatureUnit={$units.temperature}
 			timeFormat={$units.timeFormat}
+			{cachedAt}
 		/>
 		<DailyForecast
 			daily={weather.daily}

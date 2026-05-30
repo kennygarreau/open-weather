@@ -6,9 +6,14 @@
 		hourly: HourlyWeatherData;
 		temperatureUnit: string;
 		timeFormat: '12h' | '24h';
+		cachedAt?: number | null;
 	}
 
-	let { hourly, temperatureUnit, timeFormat }: Props = $props();
+	let { hourly, temperatureUnit, timeFormat, cachedAt = null }: Props = $props();
+
+	function formatCachedAt(ts: number): string {
+		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+	}
 
 	const unitLabel = $derived(temperatureUnit === 'fahrenheit' ? '°F' : '°C');
 
@@ -37,7 +42,10 @@
 
 <div class="rounded-2xl bg-white/70 p-4 shadow-sm backdrop-blur dark:bg-gray-800/70">
 	<div class="mb-3 flex items-center justify-between">
-		<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400">Hourly Forecast</h3>
+		<div>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-400">Hourly Forecast</h3>
+			<p class="text-[10px] text-gray-400">Open-Meteo{#if cachedAt} · as of {formatCachedAt(cachedAt)}{/if}</p>
+		</div>
 		<div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700">
 			{#each (['6h', '24h'] as View[]) as v (v)}
 				<button
@@ -53,24 +61,23 @@
 		</div>
 	</div>
 
-	<div
-		class="grid gap-x-2 gap-y-1"
-		style="grid-template-columns: repeat({slots.length}, minmax(0, 1fr))"
-	>
-		{#each slots as time, i (time)}
-			{@const idx = startIndex + i}
-			<div class="flex flex-col items-center gap-0.5 text-sm text-gray-700 dark:text-gray-300">
-				<span class="text-xs text-gray-400 whitespace-nowrap">{formatHour(time)}</span>
-				<WeatherIcon
-					code={hourly.weather_code[idx]}
-					isDay={hourly.is_day[idx] === 1}
-					class="text-2xl"
-				/>
-				<span class="font-medium text-xs">{Math.round(hourly.temperature_2m[idx])}{unitLabel}</span>
-				<span class="text-xs {hourly.precipitation_probability[idx] > 0 ? 'text-blue-400' : 'text-transparent'}">
-					{hourly.precipitation_probability[idx]}%
-				</span>
-			</div>
-		{/each}
+	<div class="overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#d1d5db_transparent] dark:[scrollbar-color:#4b5563_transparent]">
+		<div class="flex gap-1 pb-1">
+			{#each slots as time, i (time)}
+				{@const idx = startIndex + i}
+				<div class="flex flex-col items-center gap-0.5 text-gray-700 dark:text-gray-300 {view === '24h' ? 'w-14 shrink-0' : 'flex-1'}">
+					<span class="text-xs text-gray-400 whitespace-nowrap">{formatHour(time)}</span>
+					<WeatherIcon
+						code={hourly.weather_code[idx]}
+						isDay={hourly.is_day[idx] === 1}
+						class="text-2xl"
+					/>
+					<span class="text-xs font-medium">{Math.round(hourly.temperature_2m[idx])}{unitLabel}</span>
+					<span class="text-xs {hourly.precipitation_probability[idx] > 0 ? 'text-blue-400' : 'text-transparent'}">
+						{hourly.precipitation_probability[idx]}%
+					</span>
+				</div>
+			{/each}
+		</div>
 	</div>
 </div>
