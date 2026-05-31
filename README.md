@@ -8,10 +8,10 @@ Built because every weather site on the internet is buried under cookie banners,
 
 ## What it does
 
-- Current conditions, 6-hour and 7-day forecasts
+- Current conditions, 6-hour, 24-hour and 7-day forecasts
 - City search with autocomplete
-- Local weather station support — your station handles "right now", Open-Meteo handles the forecast
-- Favorite locations
+- Local weather station support — your station handles "right now", Open-Meteo handles the forecast (needs testing)
+- Favorite locations (per-browser)
 - Light and dark mode
 - Metric and imperial units, 12/24h clock
 - iOS home screen widget (Scriptable)
@@ -44,6 +44,8 @@ npm run dev
 ## iOS widget
 
 Install [Scriptable](https://apps.apple.com/app/scriptable/id1405459188), create a new script, and paste in [`clients/scriptable/widget.js`](clients/scriptable/widget.js). Edit the `CONFIG` block at the top with your server URL and coordinates.
+
+Accessing remotely is best done using a split-tunnel VPN with Wireguard. I use a self-hosted Wireguard instance on Opnsense with Dynamic DNS configured via DuckDNS.
 
 ---
 
