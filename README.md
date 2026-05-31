@@ -1,42 +1,62 @@
-# sv
+# open-weather
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A clean, self-hosted weather app. No ads. No trackers. No accounts.
 
-## Creating a project
+Built because every weather site on the internet is buried under cookie banners, retargeting pixels, and autoplay video ads — just to find out if it's going to rain.
 
-If you're seeing this, you've probably already done this step. Congrats!
+---
+
+## What it does
+
+- Current conditions, 6-hour and 7-day forecasts
+- City search with autocomplete
+- Local weather station support — your station handles "right now", Open-Meteo handles the forecast
+- Favorite locations
+- Light and dark mode
+- Metric and imperial units, 12/24h clock
+- iOS home screen widget (Scriptable)
+- Proxy API — call it from a mobile app or anything else
+
+All forecast data comes from [Open-Meteo](https://open-meteo.com) — free, no API key required.
+
+---
+
+## Run it
+
+**Docker (recommended)**
 
 ```sh
-# create a new project
-npx sv create my-app
+cp .env.example .env
+docker compose up -d
 ```
 
-To recreate this project with the same configuration:
+Runs on port 3000 by default. Set `PORT` in `.env` to change it.
+
+**Local dev**
 
 ```sh
-# recreate this project
-npx sv@0.15.3 create --template minimal --types ts --add tailwindcss="plugins:none" sveltekit-adapter="adapter:node" --no-install .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+---
 
-To create a production version of your app:
+## iOS widget
 
-```sh
-npm run build
-```
+Install [Scriptable](https://apps.apple.com/app/scriptable/id1405459188), create a new script, and paste in [`clients/scriptable/widget.js`](clients/scriptable/widget.js). Edit the `CONFIG` block at the top with your server URL and coordinates.
 
-You can preview the production build with `npm run preview`.
+---
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Port the server listens on |
+| `OPEN_METEO_URL` | `https://api.open-meteo.com/v1` | Override the forecast API base URL |
+| `OPEN_METEO_GEOCODING_URL` | `https://geocoding-api.open-meteo.com/v1` | Override the geocoding API base URL |
+
+---
+
+## Stack
+
+SvelteKit · Tailwind CSS · TypeScript · Docker
