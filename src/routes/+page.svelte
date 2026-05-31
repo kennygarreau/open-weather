@@ -17,6 +17,12 @@
 	let loading = $state(false);
 	let cachedAt = $state<number | null>(null);
 	let err = $state<string | null>(null);
+	let searchOpen = $state(true);
+
+	$effect(() => {
+		if ($selectedLocation) searchOpen = false;
+		else searchOpen = true;
+	});
 
 	const activeStation = stationStore.activeStation;
 	const hasStation = $derived(!!$activeStation);
@@ -113,11 +119,24 @@
 	<title>Open Weather</title>
 </svelte:head>
 
-<div class="mt-8 flex flex-col gap-6">
-	<FavoriteLocations />
+<div class="mt-3 flex flex-col gap-5">
+	<div class="flex flex-col gap-2">
+		<FavoriteLocations />
 
-	<div class="flex justify-center">
-		<SearchBar />
+		{#if searchOpen}
+			<div class="flex justify-center">
+				<SearchBar />
+			</div>
+		{:else}
+			<div class="flex justify-center">
+				<button
+					onclick={() => (searchOpen = true)}
+					class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+				>
+					🔍 Change location
+				</button>
+			</div>
+		{/if}
 	</div>
 
 	{#if !$selectedLocation && !loading}
